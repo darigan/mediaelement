@@ -413,7 +413,8 @@ class MediaElement {
 						const response = t.mediaElement.renderer[methodName](args);
 						if (response && typeof response.then === 'function') {
 							response.catch((err) => {
-								t.mediaElement.generateError(new Error(err), mediaFiles);
+								console.warn(err);
+								// t.mediaElement.generateError(new Error(err), mediaFiles);
 							});
 						}
 					}
