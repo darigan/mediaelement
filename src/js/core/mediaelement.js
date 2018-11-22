@@ -410,7 +410,12 @@ class MediaElement {
 							});
 						}
 					} else {
-						t.mediaElement.renderer[methodName](args);
+						const response = t.mediaElement.renderer[methodName](args);
+						if (response && typeof response.then === 'function') {
+							response.catch((err) => {
+								t.mediaElement.generateError(new Error(err), mediaFiles);
+							});
+						}
 					}
 				} catch (e) {
 					t.mediaElement.generateError(e, mediaFiles);
