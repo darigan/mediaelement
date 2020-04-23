@@ -8,7 +8,6 @@ import DefaultPlayer from './player/default';
 import i18n from './core/i18n';
 import {
 	IS_FIREFOX,
-	IS_SAFARI,
 	IS_IPAD,
 	IS_IPHONE,
 	IS_ANDROID,
@@ -19,7 +18,7 @@ import {
 } from './utils/constants';
 import {splitEvents, isNodeAfter, createEvent, isString} from './utils/general';
 import {calculateTimeFormat} from './utils/time';
-import {getTypeFromFile, formatType} from './utils/media';
+import {getTypeFromFile} from './utils/media';
 import * as dom from './utils/dom';
 
 mejs.mepIndex = 0;
@@ -345,53 +344,6 @@ class MediaElementPlayer {
 			}
 			dom.addClass(t.getElement(t.container), (t.isVideo ? `${t.options.classPrefix}video` : `${t.options.classPrefix}audio`));
 
-			// Workflow for Safari desktop: "clone" element and remove children, but save them to check sources, captions, etc.
-			// This ensure full compatibility when using keyboard, since Safari creates a keyboard trap when appending
-			// video/audio elements with children
-			if (IS_SAFARI && !IS_IOS) {
-
-				dom.addClass(t.getElement(t.container), `${t.options.classPrefix}hide-cues`);
-
-				const
-					cloneNode = t.node.cloneNode(),
-					children = t.node.children,
-					mediaFiles = [],
-					tracks = []
-				;
-
-				for (let i = 0, total = children.length; i < total; i++) {
-					const childNode = children[i];
-
-					switch (childNode.tagName.toLowerCase()) {
-						case 'source':
-							const elements = {};
-							Array.prototype.slice.call(childNode.attributes).forEach((item) => {
-								elements[item.name] = item.value;
-							});
-							elements.type = formatType(elements.src, elements.type);
-							mediaFiles.push(elements);
-							break;
-						case 'track':
-							childNode.mode = 'hidden';
-							tracks.push(childNode);
-							break;
-						default:
-							cloneNode.appendChild(childNode);
-							break;
-					}
-				}
-
-				t.node.remove();
-				t.node = t.media = cloneNode;
-
-				if (mediaFiles.length) {
-					t.mediaFiles = mediaFiles;
-				}
-				if (tracks.length) {
-					t.trackFiles = tracks;
-				}
-			}
-
 			// move the `video`/`audio` tag into the right spot
 			t.getElement(t.container).querySelector(`.${t.options.classPrefix}mediaelement`).appendChild(t.node);
 
@@ -622,7 +574,7 @@ class MediaElementPlayer {
 			t = this,
 			autoplayAttr = domNode.getAttribute('autoplay'),
 			autoplay = !(autoplayAttr === undefined || autoplayAttr === null || autoplayAttr === 'false'),
-			isNative = media.rendererName !== null && /(native|html5)/i.test(t.media.rendererName)
+			isNative = media.rendererName !== null && /(native|html5)/i.test(media.rendererName)
 		;
 
 		if (t.getElement(t.controls)) {
@@ -797,7 +749,7 @@ class MediaElementPlayer {
 					if (mejs.players.hasOwnProperty(playerIndex)) {
 						const p = mejs.players[playerIndex];
 
-						if (p.id !== t.id && t.options.pauseOtherPlayers && !p.paused && !p.ended) {
+						if (p.id !== t.id && t.options.pauseOtherPlayers && !p.paused && !p.ended && p.options.ignorePauseOtherPlayersOption !== true) {
 							p.pause();
 							p.hasFocus = false;
 						}
@@ -1122,6 +1074,10 @@ class MediaElementPlayer {
 				}
 			})(),
 			aspectRatio = (() => {
+				//enableAutosize == false maintain original ratio
+				if(!t.options.enableAutosize){
+					return  t.initialAspectRatio;
+				}
 				let ratio = 1;
 				if (!t.isVideo) {
 					return ratio;
@@ -2018,7 +1974,9 @@ class MediaElementPlayer {
 
 		if (typeof t.getElement(t.container) === 'object') {
 			const offscreen = t.getElement(t.container).parentNode.querySelector(`.${t.options.classPrefix}offscreen`);
+			if(offscreen){
 			offscreen.remove();
+			}
 			t.getElement(t.container).remove();
 		}
 		t.globalUnbind('resize', t.globalResizeCallback);
